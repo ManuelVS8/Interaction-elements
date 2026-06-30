@@ -166,7 +166,7 @@
         .img-cell {
             position:relative;
             width:100%;
-            aspect-ratio:1/1;
+            aspect-ratio:4/3;
             border-radius:10px;
             cursor:pointer;
             overflow:hidden;
@@ -196,7 +196,7 @@
         .classify-img-wrapper {
             width:100%;
             max-width:300px;
-            aspect-ratio:1/1;
+            aspect-ratio:4/3;
             border-radius:14px;
             overflow:hidden;
             box-shadow:0 6px 20px rgba(0,0,0,.15);
@@ -646,9 +646,6 @@ function renderG1Grid() {
         const cell = document.createElement('div');
         cell.className = 'img-cell';
         cell.dataset.name = item.name;
-        if (g1CorrectSelected.includes(item.name)) {
-            cell.classList.add('correct-cell');
-        }
         const img = document.createElement('img');
         img.src = item.img;
         img.alt = item.name;
@@ -678,40 +675,41 @@ function g1PlayCurrentAudio() {
 }
 
 function handleG1Click(cell, item) {
-    // Already correct
-    if (g1CorrectSelected.includes(item.name)) return;
-
     window.speechSynthesis && window.speechSynthesis.cancel();
     totalAttempts++;
 
     const expected = g1WordQueue[g1QueueIndex];
-    if (item.name === expected.name) {
-        // Correct
-        g1CorrectSelected.push(item.name);
-        cell.classList.add('correct-cell');
-        reproducirSonidoCorrecto();
 
-        const progress = (g1CorrectSelected.length / g1GridItems.length) * 100;
-        updateProgress('progressFill1', progress);
-
-        if (g1CorrectSelected.length === g1GridItems.length) {
-            // All done — level complete
-            updateProgress('progressFill1', 100);
-            setTimeout(() => {
-                window.speechSynthesis && window.speechSynthesis.cancel();
-                reproducirSonidoCompletado();
-                advanceToNextGame();
-            }, 600);
-        } else {
-            // Move to next word in queue
-            g1QueueIndex++;
-            showG1CurrentWord();
-        }
-    } else {
-        // Wrong
+    // Clicking an already-solved cell is treated as a mistake, same as any wrong cell
+    if (cell.classList.contains('solved-cell') || item.name !== expected.name) {
         cell.classList.add('error-cell');
         reproducirSonidoError();
         setTimeout(() => cell.classList.remove('error-cell'), 500);
+        return;
+    }
+
+    // Correct
+    g1CorrectSelected.push(item.name);
+    cell.classList.add('solved-cell'); // locks the cell from further valid clicks, no visual hint
+    cell.classList.add('correct-cell'); // brief green flash only
+    reproducirSonidoCorrecto();
+    setTimeout(() => cell.classList.remove('correct-cell'), 300);
+
+    const progress = (g1CorrectSelected.length / g1GridItems.length) * 100;
+    updateProgress('progressFill1', progress);
+
+    if (g1CorrectSelected.length === g1GridItems.length) {
+        // All done — level complete
+        updateProgress('progressFill1', 100);
+        setTimeout(() => {
+            window.speechSynthesis && window.speechSynthesis.cancel();
+            reproducirSonidoCompletado();
+            advanceToNextGame();
+        }, 600);
+    } else {
+        // Move to next word in queue
+        g1QueueIndex++;
+        showG1CurrentWord();
     }
 }
 
